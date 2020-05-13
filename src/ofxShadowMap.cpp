@@ -48,13 +48,13 @@ bool ofxShadowMap::setup(int size, Resolution resolution)
 
 void ofxShadowMap::begin(ofLight& light, float fustrumSize, float nearClip, float farClip)
 {
-	float left = -fustrumSize / 2.;
-	float right = fustrumSize / 2.;
-	float top = fustrumSize / 2.;
-	float bottom = -fustrumSize / 2.;
+	float left = -fustrumSize / 2.f;
+	float right = fustrumSize / 2.f;
+	float top = fustrumSize / 2.f;
+	float bottom = -fustrumSize / 2.f;
 
 	glm::mat4 lightProjection = glm::ortho(left, right, bottom, top, nearClip, farClip);
-	glm::mat4 lightView = glm::inverse(light.getLocalTransformMatrix());
+	glm::mat4 lightView = glm::inverse(light.getGlobalTransformMatrix());
 	_lightViewProjection = lightProjection * lightView;
 
 	depthShader.begin();
@@ -75,8 +75,8 @@ void ofxShadowMap::begin(ofLight& light, float fustrumSize, float nearClip, floa
 
 void ofxShadowMap::end()
 {
-	glDisable(GL_CULL_FACE);
 	glCullFace(GL_BACK);
+	glDisable(GL_CULL_FACE);
 	ofPopView();
 
 	fbo.end();
