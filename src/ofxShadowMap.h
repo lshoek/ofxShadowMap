@@ -24,4 +24,9 @@ private:
 	ofFbo fbo;
 
 	glm::mat4 _lightViewProjection;
+
+	static void deleteSampler(GLuint* sampler) {
+		glDeleteSamplers(1, sampler);
+	}
+	std::unique_ptr<GLuint, decltype(&deleteSampler)> samplerId{ new GLuint, &deleteSampler };
 };

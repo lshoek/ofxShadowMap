@@ -6,7 +6,7 @@
 
 bool ofxShadowMap::setup(int size, Resolution resolution)
 {
-	bool success = depthShader.load("../../../../../addons/ofxShadowMap/shaders/depth");
+	bool bSuccess = depthShader.load("../../../../../addons/ofxShadowMap/shaders/utils/depth");
 
 	ofFbo::Settings fboSettings;
 	fboSettings.depthStencilAsTexture = true;
@@ -20,7 +20,6 @@ bool ofxShadowMap::setup(int size, Resolution resolution)
 	else {
 		fboSettings.depthStencilInternalFormat = GL_DEPTH_COMPONENT16;
 	}
-
 	fboSettings.width = size;
 	fboSettings.height = size;
 	fboSettings.minFilter = GL_NEAREST;
@@ -34,16 +33,16 @@ bool ofxShadowMap::setup(int size, Resolution resolution)
 	fbo.allocate(fboSettings);
 	fbo.getDepthTexture().setRGToRGBASwizzles(true);
 
-	// Fix oversampling
-	fbo.getDepthTexture().bind();
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+	glGenSamplers(1, samplerId.get());
+	glSamplerParameteri(*samplerId, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glSamplerParameteri(*samplerId, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glSamplerParameteri(*samplerId, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+	glSamplerParameteri(*samplerId, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
 
 	float borderColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
-	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
-	fbo.getDepthTexture().unbind();
+	glSamplerParameterfv(*samplerId, GL_TEXTURE_BORDER_COLOR, borderColor);
 
-	return success;
+	return bSuccess;
 }
 
 void ofxShadowMap::begin(ofLight& light, float fustrumSize, float nearClip, float farClip)
@@ -63,9 +62,10 @@ void ofxShadowMap::begin(ofLight& light, float fustrumSize, float nearClip, floa
 	ofPushView();
 	ofSetMatrixMode(OF_MATRIX_PROJECTION);
 	ofLoadMatrix(lightProjection);
-	ofSetMatrixMode(OF_MATRIX_MODELVIEW);
 
+	ofSetMatrixMode(OF_MATRIX_MODELVIEW);
 	ofLoadViewMatrix(lightView);
+
 	ofViewport(ofRectangle(0, 0, fbo.getWidth(), fbo.getHeight()));
 
 	ofClear(0);
@@ -85,9 +85,18 @@ void ofxShadowMap::end()
 
 void ofxShadowMap::updateShader(const std::shared_ptr<ofShader>& shader)
 {
+	const int texUnit = 1;
+
 	shader->begin();
 	shader->setUniformMatrix4f("lightSpaceMatrix", _lightViewProjection);
+
+	glActiveTexture(GL_TEXTURE0 + texUnit);
+	glBindTexture(GL_TEXTURE_2D, fbo.getDepthTexture().getTextureData().textureID);
+	glBindSampler(texUnit, *samplerId);
+
 	shader->setUniformTexture("shadowMap", fbo.getDepthTexture(), 1);
+	glActiveTexture(GL_TEXTURE0);
+
 	shader->end();
 }
 
